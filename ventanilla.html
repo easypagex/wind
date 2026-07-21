@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Airplane Window · EasyPageX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --amber: #ffb000;
+    --amber-dim: #7a5400;
+    --bg: #0a0a0a;
+    --panel: #141414;
+    --sky-glow: #7fd1ff;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(ellipse at 50% 0%, #4fb3f5 0%, #1a6fc4 55%, #0d4a8f 100%);
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--amber);
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  .app{
+    width:100%;
+    max-width:430px;
+    padding: 18px 16px 40px;
+    display:flex; flex-direction:column; align-items:center;
+    gap:16px;
+  }
+
+  header{
+    text-align:center;
+    padding-top: 6px;
+  }
+  header h1{
+    font-family:'VT323', monospace;
+    font-size: 30px;
+    letter-spacing: 2px;
+    margin: 0;
+    color: var(--amber);
+    text-shadow: 0 0 8px rgba(255,176,0,0.6);
+  }
+  header p{
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #b8b8b8;
+    letter-spacing: 1px;
+  }
+
+  /* ---- phone / photo frame ---- */
+  .frame{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 720 / 1280;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px #2a2a2a, 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(255,176,0,0.08);
+    background:#000;
+  }
+  .frame img.bg{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit: cover;
+    display:block;
+    user-select:none; -webkit-user-drag:none;
+  }
+
+  /* window sky mask - positioned to match photo's blue glass area */
+  .sky-mask{
+    position:absolute;
+    left: 18.9%;
+    top: 30.3%;
+    width: 61.9%;
+    height: 42.5%;
+    border-radius: 24% / 20%;
+    overflow: hidden;
+    z-index: 2;
+    background: linear-gradient(180deg, #6cc7ff 0%, #4aa8ec 60%, #3d92db 100%);
+  }
+
+  .emoji-layer, .rain-layer{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+  }
+
+  .emoji{
+    position:absolute;
+    font-size: 22px;
+    line-height:1;
+    will-change: transform;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+    opacity: 0.95;
+  }
+
+  @keyframes flyRight{
+    from{ transform: translateX(-30%); }
+    to{ transform: translateX(230%); }
+  }
+  @keyframes flyLeft{
+    from{ transform: translateX(230%); }
+    to{ transform: translateX(-30%); }
+  }
+  @keyframes bob{
+    0%,100%{ margin-top:-3px; }
+    50%{ margin-top:3px; }
+  }
+
+  /* rain layer */
+  .rain-layer{
+    opacity:0;
+    transition: opacity .5s ease;
+    pointer-events:none;
+  }
+  .rain-layer.active{ opacity:1; }
+  .drop{
+    position:absolute;
+    top:-10%;
+    width: 2px;
+    height: 14px;
+    background: linear-gradient(to bottom, rgba(190,225,255,0), rgba(190,225,255,0.85));
+    border-radius: 2px;
+    animation-name: fall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  @keyframes fall{
+    0%{ transform: translateY(-10%) translateX(0); opacity:0; }
+    10%{ opacity: 1; }
+    100%{ transform: translateY(1000%) translateX(-14px); opacity: 0.2; }
+  }
+  .rain-layer.active::after{
+    content:"";
+    position:absolute; inset:0;
+    background: rgba(120,150,180,0.12);
+    pointer-events:none;
+  }
+
+  /* subtle glass sheen overlay to keep photo integrity above emoji layer edges */
+  .sheen{
+    position:absolute; inset:0;
+    z-index:3;
+    pointer-events:none;
+    box-shadow: inset 0 0 14px rgba(0,0,0,0.25);
+  }
+
+  /* ---- controls ---- */
+  .controls{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-top: 4px;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+  }
+  button.ctrl{
+    flex:1;
+    font-family:'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    background: var(--panel);
+    color: var(--amber);
+    border: 1px solid var(--amber-dim);
+    border-radius: 10px;
+    padding: 13px 10px;
+    cursor:pointer;
+    transition: all .2s ease;
+    text-align:center;
+  }
+  button.ctrl:active{ transform: scale(0.97); }
+  button.ctrl.on{
+    background: var(--amber);
+    color: #1a1200;
+    box-shadow: 0 0 16px rgba(255,176,0,0.5);
+    border-color: var(--amber);
+  }
+
+  a.easypagex{
+    display:block;
+    text-align:center;
+    text-decoration:none;
+    font-family:'VT323', monospace;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: #0a0a0a;
+    background: linear-gradient(180deg, #ffc233, #ff9d00);
+    border: 1px solid #7a5400;
+    border-radius: 10px;
+    padding: 13px 10px;
+    box-shadow: 0 4px 14px rgba(255,157,0,0.35);
+    transition: transform .15s ease;
+  }
+  a.easypagex:active{ transform: scale(0.97); }
+
+  footer{
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: #666;
+    letter-spacing: 1px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>✈ FLIGHT BY THE WINDOW</h1>
+    <p>tap the buttons to bring the cabin to life</p>
+  </header>
+
+  <div class="frame" id="frame">
+    <img class="bg" src="window.jpg" alt="Airplane window">
+
+    <div class="sky-mask" id="skyMask">
+      <div class="emoji-layer" id="emojiLayer"></div>
+      <div class="rain-layer" id="rainLayer"></div>
+    </div>
+
+    <div class="sheen"></div>
+  </div>
+
+  <div class="controls">
+    <div class="row">
+      <button class="ctrl" id="rainBtn">🌧 Rain: OFF</button>
+      <button class="ctrl" id="soundBtn">🔊 Sound: OFF</button>
+    </div>
+    <a class="easypagex" href="https://easypagex.github.io" target="_blank" rel="noopener">⚡ EasyPageX</a>
+  </div>
+
+  <footer>EASYPAGEX · WINDOW SEAT EXPERIENCE</footer>
+</div>
+
+<script>
+/* ---------- Emojis crossing the window, one at a time, left to right ---------- */
+const emojiLayer = document.getElementById('emojiLayer');
+const symbols = ['☁️','✈️','⭐','🐦','🐄','☀️'];
+
+function spawnEmoji(onDone){
+  const el = document.createElement('div');
+  el.className = 'emoji';
+  el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+
+  const top = 5 + Math.random() * 82;       // % within the mask
+  const duration = 5 + Math.random() * 3;    // seconds to cross
+  const size = 34 + Math.random() * 30;      // bigger emojis
+  const bobDur = 1.6 + Math.random() * 1.8;
+
+  el.style.top = top + '%';
+  el.style.fontSize = size + 'px';
+  el.style.animation = `flyRight ${duration}s linear forwards, bob ${bobDur}s ease-in-out infinite`;
+
+  emojiLayer.appendChild(el);
+
+  setTimeout(() => {
+    el.remove();
+    if(onDone) onDone();
+  }, duration * 1000 + 150);
+}
+
+function scheduleNextEmoji(){
+  const gapBefore = 300 + Math.random() * 900; // short pause before the next one starts
+  setTimeout(() => {
+    spawnEmoji(scheduleNextEmoji);
+  }, gapBefore);
+}
+
+scheduleNextEmoji();
+
+
+
+/* ---------- Rain toggle ---------- */
+const rainLayer = document.getElementById('rainLayer');
+const rainBtn = document.getElementById('rainBtn');
+let rainOn = false;
+let dropsBuilt = false;
+
+function buildRain(){
+  if(dropsBuilt) return;
+  dropsBuilt = true;
+  const dropCount = 40;
+  for(let i=0;i<dropCount;i++){
+    const d = document.createElement('div');
+    d.className = 'drop';
+    const left = Math.random()*110 - 5;
+    const dur = 0.5 + Math.random()*0.6;
+    const delay = Math.random()*2;
+    d.style.left = left + '%';
+    d.style.animationDuration = dur + 's';
+    d.style.animationDelay = delay + 's';
+    d.style.height = (10 + Math.random()*10) + 'px';
+    rainLayer.appendChild(d);
+  }
+}
+
+rainBtn.addEventListener('click', () => {
+  rainOn = !rainOn;
+  if(rainOn) buildRain();
+  rainLayer.classList.toggle('active', rainOn);
+  rainBtn.classList.toggle('on', rainOn);
+  rainBtn.textContent = rainOn ? '🌧 Rain: ON' : '🌧 Rain: OFF';
+});
+
+/* ---------- Cabin sound: engine drone + ding-dong chime ---------- */
+let audioCtx = null;
+let engineNodes = null;
+let soundOn = false;
+let chimeInterval = null;
+
+function initAudio(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function startEngineDrone(){
+  const now = audioCtx.currentTime;
+  const bufferSize = 2 * audioCtx.sampleRate;
+
+  function makeNoiseBuffer(){
+    const buf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++){
+      data[i] = Math.random() * 2 - 1;
+    }
+    return buf;
+  }
+
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0;
+  masterGain.gain.linearRampToValueAtTime(1, now + 1.5);
+  masterGain.connect(audioCtx.destination);
+
+  // --- low rumble: the deep body of a jet engine ---
+  const rumbleNoise = audioCtx.createBufferSource();
+  rumbleNoise.buffer = makeNoiseBuffer();
+  rumbleNoise.loop = true;
+  const rumbleFilter = audioCtx.createBiquadFilter();
+  rumbleFilter.type = 'lowpass';
+  rumbleFilter.frequency.value = 340;
+  rumbleFilter.Q.value = 0.5;
+  const rumbleGain = audioCtx.createGain();
+  rumbleGain.gain.value = 0.11;
+  rumbleNoise.connect(rumbleFilter);
+  rumbleFilter.connect(rumbleGain);
+  rumbleGain.connect(masterGain);
+  rumbleNoise.start();
+
+  // --- mid-air hiss: cabin air / wind against fuselage ---
+  const hissNoise = audioCtx.createBufferSource();
+  hissNoise.buffer = makeNoiseBuffer();
+  hissNoise.loop = true;
+  const hissFilter = audioCtx.createBiquadFilter();
+  hissFilter.type = 'bandpass';
+  hissFilter.frequency.value = 1800;
+  hissFilter.Q.value = 0.6;
+  const hissGain = audioCtx.createGain();
+  hissGain.gain.value = 0.05;
+  hissNoise.connect(hissFilter);
+  hissFilter.connect(hissGain);
+  hissGain.connect(masterGain);
+  hissNoise.start();
+
+  // --- high hiss: air vents ---
+  const airNoise = audioCtx.createBufferSource();
+  airNoise.buffer = makeNoiseBuffer();
+  airNoise.loop = true;
+  const airFilter = audioCtx.createBiquadFilter();
+  airFilter.type = 'highpass';
+  airFilter.frequency.value = 3200;
+  const airGain = audioCtx.createGain();
+  airGain.gain.value = 0.018;
+  airNoise.connect(airFilter);
+  airFilter.connect(airGain);
+  airGain.connect(masterGain);
+  airNoise.start();
+
+  // --- turbine whine: tonal hum with slight vibrato, gives it that "jet" character ---
+  const whine = audioCtx.createOscillator();
+  whine.type = 'sawtooth';
+  whine.frequency.value = 118;
+  const whineGain = audioCtx.createGain();
+  whineGain.gain.value = 0.025;
+  const whineFilter = audioCtx.createBiquadFilter();
+  whineFilter.type = 'lowpass';
+  whineFilter.frequency.value = 500;
+  whine.connect(whineFilter);
+  whineFilter.connect(whineGain);
+  whineGain.connect(masterGain);
+  whine.start();
+
+  const whine2 = audioCtx.createOscillator();
+  whine2.type = 'sawtooth';
+  whine2.frequency.value = 236; // octave overtone
+  const whine2Gain = audioCtx.createGain();
+  whine2Gain.gain.value = 0.012;
+  whine2.connect(whine2Gain);
+  whine2Gain.connect(masterGain);
+  whine2.start();
+
+  // slow LFO wobble on the whine, like subtle engine speed drift
+  const lfo = audioCtx.createOscillator();
+  lfo.frequency.value = 0.15;
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 3;
+  lfo.connect(lfoGain);
+  lfoGain.connect(whine.frequency);
+  lfo.start();
+
+  return { masterGain, nodes: [rumbleNoise, hissNoise, airNoise, whine, whine2, lfo] };
+}
+
+function stopEngineDrone(engine){
+  if(!engine) return;
+  const now = audioCtx.currentTime;
+  engine.masterGain.gain.cancelScheduledValues(now);
+  engine.masterGain.gain.setValueAtTime(engine.masterGain.gain.value, now);
+  engine.masterGain.gain.linearRampToValueAtTime(0, now + 0.6);
+  setTimeout(() => {
+    engine.nodes.forEach(n => { try{ n.stop(); }catch(e){} });
+  }, 700);
+}
+
+
+function playDingDong(){
+  const t0 = audioCtx.currentTime;
+  const notes = [
+    { freq: 783.99, start: 0,    dur: 0.9 }, // G5 - "ding"
+    { freq: 659.25, start: 0.55, dur: 1.2 }  // E5 - "dong"
+  ];
+  notes.forEach(n => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = n.freq;
+    gain.gain.setValueAtTime(0, t0 + n.start);
+    gain.gain.linearRampToValueAtTime(0.22, t0 + n.start + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + n.start + n.dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t0 + n.start);
+    osc.stop(t0 + n.start + n.dur + 0.05);
+  });
+}
+
+const soundBtn = document.getElementById('soundBtn');
+soundBtn.addEventListener('click', () => {
+  if(!audioCtx) initAudio();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+
+  soundOn = !soundOn;
+  soundBtn.classList.toggle('on', soundOn);
+  soundBtn.textContent = soundOn ? '🔊 Sound: ON' : '🔊 Sound: OFF';
+
+  if(soundOn){
+    engineNodes = startEngineDrone();
+    playDingDong();
+    chimeInterval = setInterval(playDingDong, 20000);
+  } else {
+    stopEngineDrone(engineNodes);
+    engineNodes = null;
+    clearInterval(chimeInterval);
+  }
+});
+</script>
+</body>
+</html>
